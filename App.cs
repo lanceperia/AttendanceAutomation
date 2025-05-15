@@ -1,4 +1,4 @@
-﻿using AttendanceAutomation.Interfaces;
+using AttendanceAutomation.Interfaces;
 
 namespace AttendanceAutomation
 {
@@ -33,45 +33,30 @@ namespace AttendanceAutomation
 
             if (emaptaService.IsShiftStarting())
             {
-                ProcessClockIn();
-
+                ProcessDtr("Clock In", emaptaService.HasClockedIn);
                 return;
             }
 
             if (emaptaService.IsShiftEnding())
             {
-                ProcessClockOut();
+                ProcessDtr("Clock Out", emaptaService.HasClockedIn);
                 return;
             }
 
         }
 
         // Private Methods
-
-        private void ProcessClockIn()
+        private void ProcessDtr(string action, Func<bool> hasClockedFunc)
         {
-            if (emaptaService.HasClockedIn())
+            if (hasClockedFunc())
             {
-                logger.Information("Clocked In Successfully!");
+                logger.Information($"{action} Successfully!");
 
-                emailService.SendEmail("Clock In", $"Clocked in at {DateTime.Now:t}");
+                emailService.SendEmail(action, $"{action} at {DateTime.Now:t}");
                 return;
             }
 
-            emailService.SendEmail("Failed", $"Clock In failed");
-        }
-
-        private void ProcessClockOut()
-        {
-            if (emaptaService.HasClockedOut())
-            {
-                logger.Information("Clocked Out Successfully!");
-
-                emailService.SendEmail("Clock out", $"Clocked out at {DateTime.Now:t}");
-                return;
-            }
-
-            emailService.SendEmail("Failed", $"Clock out failed");
+            emailService.SendEmail(action, $"{action} failed");
         }
     }
 }
