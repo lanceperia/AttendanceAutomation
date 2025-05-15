@@ -6,9 +6,9 @@
         bool IsTokenRefreshed();
         bool HasClockedIn();
         bool HasClockedOut();
-        bool IsShiftStarting();
+        bool IsNewShift();
         bool IsShiftCompleted();
-        bool IsShiftEnding();
+        bool IsShiftStarted();
 
     }
 }

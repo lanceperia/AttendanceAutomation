@@ -15,7 +15,15 @@ namespace AttendanceAutomation
                 return;
             }
 
-            if (!emaptaService.HasToken() || !emaptaService.IsTokenRefreshed())
+            if (!emaptaService.HasToken())
+            {
+                logger.Information("No reference token set up");
+                emailService.SendEmail("Failed", "Setup issue");
+
+                return;
+            }
+
+            if (!emaptaService.IsTokenRefreshed())
             {
                 logger.Information("ISSUE WITH REFRESH TOKEN :(");
 
@@ -24,6 +32,10 @@ namespace AttendanceAutomation
                 return;
             }
 
+            // TO-DO: HOLIDAY CHECKING
+            // INSERT HERE
+
+
             if (emaptaService.IsShiftCompleted())
             {
                 emailService.SendEmail("Shift is done", $"Shift is completed");
@@ -31,18 +43,17 @@ namespace AttendanceAutomation
                 return;
             }
 
-            if (emaptaService.IsShiftStarting())
+            if (emaptaService.IsShiftStarted())
+            {
+                ProcessDtr("Clock Out", emaptaService.HasClockedOut);
+                return;
+            }
+
+            if (emaptaService.IsNewShift())
             {
                 ProcessDtr("Clock In", emaptaService.HasClockedIn);
                 return;
             }
-
-            if (emaptaService.IsShiftEnding())
-            {
-                ProcessDtr("Clock Out", emaptaService.HasClockedIn);
-                return;
-            }
-
         }
 
         // Private Methods

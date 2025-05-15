@@ -22,12 +22,12 @@ namespace AttendanceAutomation.Models
         public const string STARTED = "Started";
 
         [JsonPropertyName("is_complete")]
-        public bool IsComplete { get; set; }
+        public bool? IsComplete { get; set; }
 
         [JsonPropertyName("attendance_status")]
         public string Status { get; set; }
 
         [JsonPropertyName("is_restday")]
-        public bool IsRestday { get; set; }
+        public bool? IsRestday { get; set; }
     }
 }

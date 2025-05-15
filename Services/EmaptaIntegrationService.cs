@@ -3,6 +3,7 @@ using AttendanceAutomation.Models;
 using Microsoft.Extensions.Configuration;
 using System.Net.Http.Json;
 using System.Net.Mime;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -14,22 +15,16 @@ namespace AttendanceAutomation.Services
         private const string ACCESS_TOKEN = "AccessToken";
         private const string REFRESH_TOKEN = "RefreshToken";
 
-        private readonly string? _accessToken;
         private readonly string? _refreshToken;
         private readonly HttpClient _client;
         private readonly ILoggerService _loggerService;
+        private string? _accessToken;
 
         public EmaptaIntegrationService(ILoggerService loggerService, IConfiguration configuration)
         {
             _loggerService = loggerService;
             _accessToken = configuration[ACCESS_TOKEN];
             _refreshToken = configuration[REFRESH_TOKEN];
-
-            _client = new HttpClient()
-            {
-                BaseAddress = new Uri("https://api.platform.emapta.com")
-            };
-            _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_accessToken}");
         }
 
         public bool HasToken()
@@ -48,6 +43,11 @@ namespace AttendanceAutomation.Services
             };
 
             var jsonContent = new StringContent(JsonSerializer.Serialize(dto), Encoding.UTF8, MediaTypeNames.Application.Json);
+            var _client = new HttpClient()
+            {
+                BaseAddress = new Uri("https://api.platform.emapta.com")
+            };
+            _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_accessToken}");
             var result = _client.PostAsync("auth/v1/auth/protocol/openid-connect/token", jsonContent).Result;
             var response = result.Content.ReadAsStringAsync().Result;
 
@@ -56,34 +56,25 @@ namespace AttendanceAutomation.Services
             if (result.IsSuccessStatusCode)
             {
                 var tokens = JsonSerializer.Deserialize<TokenResponseModel>(response);
-                OverwriteAppSettings(tokens);
+                var fileName = "appsettings.json";
+                var binPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, fileName);
+
+
+                // Overwrite AppSettings in published build
+                OverwriteAppSettings(tokens, binPath);
+
+                _accessToken = tokens!.Result.AccessToken;
 
                 return true;
             }
 
             return false;
         }
-        public bool HasClockedIn()
+        
+        public bool IsNewShift()
         {
-            var result = _client.PostAsync("time-and-attendance/ta/v1/dtr/attendance/login", new StringContent(string.Empty)).Result;
-            var response = result.Content.ReadAsStringAsync().Result;
-
-            LogResponse(result, "ClockIn");
-
-            return result.IsSuccessStatusCode;
-        }
-        public bool HasClockedOut()
-        {
-            var result = _client.PostAsync("time-and-attendance/ta/v1/dtr/attendance/logout", new StringContent(string.Empty)).Result;
-            var response = result.Content.ReadAsStringAsync().Result;
-
-            LogResponse(result, "ClockOut");
-
-            return result.IsSuccessStatusCode;
-        }
-        public bool IsShiftStarting()
-        {
-            return false;
+            return true;
+            throw new NotImplementedException();
         }
         public bool IsShiftCompleted()
         {
@@ -96,7 +87,7 @@ namespace AttendanceAutomation.Services
 
             return attendance.Status == AttendanceItem.COMPLETED;
         }
-        public bool IsShiftEnding()
+        public bool IsShiftStarted()
         {
             var attendance = GetAttendanceDetails();
 
@@ -107,12 +98,41 @@ namespace AttendanceAutomation.Services
 
             return attendance.Status == AttendanceItem.STARTED;
         }
+        public bool HasClockedIn()
+        {
+            return IsAttendanceActionSuccessful("time-and-attendance/ta/v1/dtr/attendance/login", "ClockIn");
+        }
+        public bool HasClockedOut()
+        {
+            return IsAttendanceActionSuccessful("time-and-attendance/ta/v1/dtr/attendance/logout", "ClockOut");
+        }
 
         // Private Methods
+        private bool IsAttendanceActionSuccessful(string apiPath, string action)
+        {
+            var _client = new HttpClient()
+            {
+                BaseAddress = new Uri("https://api.platform.emapta.com")
+            };
+            _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_accessToken}");
+
+            var result = _client.PostAsync(apiPath, new StringContent(string.Empty)).Result;
+            var response = result.Content.ReadAsStringAsync().Result;
+
+            LogResponse(result, action);
+
+            return result.IsSuccessStatusCode;
+        }
         private AttendanceItem? GetAttendanceDetails()
         {
             var dateNow = DateTime.Now.ToString("yyyy-MM-dd");
             var path = $"time-and-attendance/ta/v1/dtr/attendance?date_from={dateNow}&date_to={dateNow}";
+
+            var _client = new HttpClient()
+            {
+                BaseAddress = new Uri("https://api.platform.emapta.com")
+            };
+            _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_accessToken}");
             var result = _client.GetAsync(path).Result;
             var response = result.Content.ReadAsStringAsync().Result;
 
@@ -127,11 +147,10 @@ namespace AttendanceAutomation.Services
 
             return null;
         }
-        private void OverwriteAppSettings(TokenResponseModel? model)
+        private void OverwriteAppSettings(TokenResponseModel? model, string filePath)
         {
             try
             {
-                var filePath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
                 var json = File.ReadAllText(filePath);
                 var root = JsonNode.Parse(json);
 
