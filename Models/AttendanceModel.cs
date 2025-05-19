@@ -17,7 +17,7 @@ namespace AttendanceAutomation.Models
     public class AttendanceItem
     {
         public const string COMPLETED = "Completed";
-        public const string NOT_STARTED = "Not Started";
+        public const string NOT_STARTED = "Not started";
         public const string ON_LEAVE = "On leave";
         public const string STARTED = "Started";
 

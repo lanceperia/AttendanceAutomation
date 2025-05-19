@@ -1,4 +1,6 @@
-﻿namespace AttendanceAutomation.Interfaces
+﻿using AttendanceAutomation.Models;
+
+namespace AttendanceAutomation.Interfaces
 {
     public interface IEmaptaIntegrationService
     {
@@ -6,9 +8,7 @@
         bool IsTokenRefreshed();
         bool HasClockedIn();
         bool HasClockedOut();
-        bool IsNewShift();
-        bool IsShiftCompleted();
-        bool IsShiftStarted();
-
+        
+        AttendanceItem GetAttendanceDetails();
     }
 }

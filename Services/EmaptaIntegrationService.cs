@@ -70,34 +70,7 @@ namespace AttendanceAutomation.Services
 
             return false;
         }
-        
-        public bool IsNewShift()
-        {
-            return true;
-            throw new NotImplementedException();
-        }
-        public bool IsShiftCompleted()
-        {
-            var attendance = GetAttendanceDetails();
-
-            if (attendance is null)
-            {
-                throw new Exception("API failed");
-            }
-
-            return attendance.Status == AttendanceItem.COMPLETED;
-        }
-        public bool IsShiftStarted()
-        {
-            var attendance = GetAttendanceDetails();
-
-            if (attendance is null)
-            {
-                throw new Exception("API failed");
-            }
-
-            return attendance.Status == AttendanceItem.STARTED;
-        }
+       
         public bool HasClockedIn()
         {
             return IsAttendanceActionSuccessful("time-and-attendance/ta/v1/dtr/attendance/login", "ClockIn");
@@ -106,24 +79,7 @@ namespace AttendanceAutomation.Services
         {
             return IsAttendanceActionSuccessful("time-and-attendance/ta/v1/dtr/attendance/logout", "ClockOut");
         }
-
-        // Private Methods
-        private bool IsAttendanceActionSuccessful(string apiPath, string action)
-        {
-            var _client = new HttpClient()
-            {
-                BaseAddress = new Uri("https://api.platform.emapta.com")
-            };
-            _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_accessToken}");
-
-            var result = _client.PostAsync(apiPath, new StringContent(string.Empty)).Result;
-            var response = result.Content.ReadAsStringAsync().Result;
-
-            LogResponse(result, action);
-
-            return result.IsSuccessStatusCode;
-        }
-        private AttendanceItem? GetAttendanceDetails()
+        public AttendanceItem GetAttendanceDetails()
         {
             var dateNow = DateTime.Now.ToString("yyyy-MM-dd");
             var path = $"time-and-attendance/ta/v1/dtr/attendance?date_from={dateNow}&date_to={dateNow}";
@@ -145,8 +101,27 @@ namespace AttendanceAutomation.Services
                 return attendanceModel.Data.Items.FirstOrDefault();
             }
 
-            return null;
+            throw new Exception("API failed");
+
         }
+
+        // Private Methods
+        private bool IsAttendanceActionSuccessful(string apiPath, string action)
+        {
+            var _client = new HttpClient()
+            {
+                BaseAddress = new Uri("https://api.platform.emapta.com")
+            };
+            _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_accessToken}");
+
+            var result = _client.PostAsync(apiPath, new StringContent(string.Empty)).Result;
+            var response = result.Content.ReadAsStringAsync().Result;
+
+            LogResponse(result, action);
+
+            return result.IsSuccessStatusCode;
+        }
+        
         private void OverwriteAppSettings(TokenResponseModel? model, string filePath)
         {
             try

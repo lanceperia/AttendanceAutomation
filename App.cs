@@ -1,4 +1,5 @@
 using AttendanceAutomation.Interfaces;
+using AttendanceAutomation.Models;
 
 namespace AttendanceAutomation
 {
@@ -35,21 +36,22 @@ namespace AttendanceAutomation
             // TO-DO: HOLIDAY CHECKING
             // INSERT HERE
 
+            var attendanceDetails = emaptaService.GetAttendanceDetails();
 
-            if (emaptaService.IsShiftCompleted())
+            if (IsStatusEqual(attendanceDetails.Status, AttendanceItem.COMPLETED))
             {
                 emailService.SendEmail("Shift is done", $"Shift is completed");
 
                 return;
             }
 
-            if (emaptaService.IsShiftStarted())
+            if (IsStatusEqual(attendanceDetails.Status, AttendanceItem.STARTED))
             {
                 ProcessDtr("Clock Out", emaptaService.HasClockedOut);
                 return;
             }
 
-            if (emaptaService.IsNewShift())
+            if (IsStatusEqual(attendanceDetails.Status, AttendanceItem.NOT_STARTED))
             {
                 ProcessDtr("Clock In", emaptaService.HasClockedIn);
                 return;
@@ -57,6 +59,10 @@ namespace AttendanceAutomation
         }
 
         // Private Methods
+        private bool IsStatusEqual(string expected, string actual)
+        {
+            return expected.Equals(actual, StringComparison.OrdinalIgnoreCase);
+        }
         private void ProcessDtr(string action, Func<bool> hasClockedFunc)
         {
             if (hasClockedFunc())
