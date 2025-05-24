@@ -1,5 +1,6 @@
 using AttendanceAutomation.Interfaces;
 using AttendanceAutomation.Models;
+using System;
 
 namespace AttendanceAutomation
 {
@@ -33,11 +34,19 @@ namespace AttendanceAutomation
                 return;
             }
 
-            // TO-DO: HOLIDAY CHECKING
-            // INSERT HERE
-
             var attendanceDetails = emaptaService.GetAttendanceDetails();
 
+            // Check Rest day
+            if ((attendanceDetails.IsRestday is bool isRestDay && isRestDay) 
+                || IsStatusEqual(attendanceDetails.Status, AttendanceItem.RESTDAY)
+                || IsStatusEqual(attendanceDetails.Status, AttendanceItem.ON_LEAVE))
+            {
+                emailService.SendEmail("Restday", $"Don't bother working");
+
+                return;
+            }
+
+            // Check if DTR is completed
             if (IsStatusEqual(attendanceDetails.Status, AttendanceItem.COMPLETED))
             {
                 emailService.SendEmail("Shift is done", $"Shift is completed");
@@ -45,12 +54,14 @@ namespace AttendanceAutomation
                 return;
             }
 
+            // Check if DTR is ready to clock out
             if (IsStatusEqual(attendanceDetails.Status, AttendanceItem.STARTED))
             {
                 ProcessDtr("Clock Out", emaptaService.HasClockedOut);
                 return;
             }
 
+            // Check if DTR is ready to clock in
             if (IsStatusEqual(attendanceDetails.Status, AttendanceItem.NOT_STARTED))
             {
                 ProcessDtr("Clock In", emaptaService.HasClockedIn);
@@ -59,7 +70,7 @@ namespace AttendanceAutomation
         }
 
         // Private Methods
-        private bool IsStatusEqual(string expected, string actual)
+        private bool IsStatusEqual(string actual, string expected)
         {
             return expected.Equals(actual, StringComparison.OrdinalIgnoreCase);
         }

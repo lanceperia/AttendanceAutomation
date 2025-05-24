@@ -20,6 +20,7 @@ namespace AttendanceAutomation.Models
         public const string NOT_STARTED = "Not started";
         public const string ON_LEAVE = "On leave";
         public const string STARTED = "Started";
+        public const string RESTDAY = "Rest Day";
 
         [JsonPropertyName("is_complete")]
         public bool? IsComplete { get; set; }

@@ -15,16 +15,18 @@ namespace AttendanceAutomation.Services
         private const string ACCESS_TOKEN = "AccessToken";
         private const string REFRESH_TOKEN = "RefreshToken";
 
-        private readonly string? _refreshToken;
         private readonly HttpClient _client;
         private readonly ILoggerService _loggerService;
+        private readonly string? _appSettingsPath;
+        private string? _refreshToken;
         private string? _accessToken;
 
         public EmaptaIntegrationService(ILoggerService loggerService, IConfiguration configuration)
         {
             _loggerService = loggerService;
-            _accessToken = configuration[ACCESS_TOKEN];
-            _refreshToken = configuration[REFRESH_TOKEN];
+            _appSettingsPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
+
+            FetchAppSettings();
         }
 
         public bool HasToken()
@@ -56,12 +58,9 @@ namespace AttendanceAutomation.Services
             if (result.IsSuccessStatusCode)
             {
                 var tokens = JsonSerializer.Deserialize<TokenResponseModel>(response);
-                var fileName = "appsettings.json";
-                var binPath = Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, fileName);
-
-
+                
                 // Overwrite AppSettings in published build
-                OverwriteAppSettings(tokens, binPath);
+                OverwriteAppSettings(tokens, _appSettingsPath);
 
                 _accessToken = tokens!.Result.AccessToken;
 
@@ -70,7 +69,7 @@ namespace AttendanceAutomation.Services
 
             return false;
         }
-       
+
         public bool HasClockedIn()
         {
             return IsAttendanceActionSuccessful("time-and-attendance/ta/v1/dtr/attendance/login", "ClockIn");
@@ -121,7 +120,7 @@ namespace AttendanceAutomation.Services
 
             return result.IsSuccessStatusCode;
         }
-        
+
         private void OverwriteAppSettings(TokenResponseModel? model, string filePath)
         {
             try
@@ -143,6 +142,28 @@ namespace AttendanceAutomation.Services
                 _loggerService.Error($"{e.Message} -- {e.StackTrace}");
             }
 
+        }
+        private void FetchAppSettings()
+        {
+            try
+            {
+                var json = File.ReadAllText(_appSettingsPath);
+                var root = JsonNode.Parse(json);
+
+                if (root is JsonObject jObject)
+                {
+                    _accessToken = jObject[ACCESS_TOKEN].ToString();
+                    _refreshToken = jObject[REFRESH_TOKEN].ToString();
+
+                    return;
+                }
+
+                _loggerService.Error($"Can't read file");
+            }
+            catch (Exception e)
+            {
+                _loggerService.Error($"{e.Message} -- {e.StackTrace}");
+            }
         }
         private void LogResponse(HttpResponseMessage? message, string method)
         {

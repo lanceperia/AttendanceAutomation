@@ -23,6 +23,8 @@ namespace AttendanceAutomation
                 // Resolve and run the application
                 var app = serviceProvider.GetService<App>();
                 app!.Run();
+
+                logger.Information("Closing console...");
             }
             catch (Exception e)
             {
