@@ -77,11 +77,11 @@ namespace AttendanceAutomation
             {
                 logger.Information($"Clocked {action} Successfully!");
 
-                emailService.SendEmail(action, $"Clocked {action} at {DateTime.Now:t}");
+                emailService.SendEmail("DTR", $"Clocked {action} at {DateTime.Now:t}");
                 return;
             }
 
-            emailService.SendEmail(action, $"Clock {action} failed");
+            emailService.SendEmail("DTR", $"Clock {action} failed");
         }
     }
 }
