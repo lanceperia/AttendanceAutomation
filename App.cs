@@ -57,14 +57,14 @@ namespace AttendanceAutomation
             // Check if DTR is ready to clock out
             if (IsStatusEqual(attendanceDetails.Status, AttendanceItem.STARTED))
             {
-                ProcessDtr("Clock Out", emaptaService.HasClockedOut);
+                ProcessDtr("Out", emaptaService.HasClockedOut);
                 return;
             }
 
             // Check if DTR is ready to clock in
             if (IsStatusEqual(attendanceDetails.Status, AttendanceItem.NOT_STARTED))
             {
-                ProcessDtr("Clock In", emaptaService.HasClockedIn);
+                ProcessDtr("In", emaptaService.HasClockedIn);
                 return;
             }
         }
@@ -78,13 +78,13 @@ namespace AttendanceAutomation
         {
             if (hasClockedFunc())
             {
-                logger.Information($"{action} Successfully!");
+                logger.Information($"Clocked {action} Successfully!");
 
-                emailService.SendEmail(action, $"{action} at {DateTime.Now:t}");
+                emailService.SendEmail(action, $"Clocked {action} at {DateTime.Now:t}");
                 return;
             }
 
-            emailService.SendEmail(action, $"{action} failed");
+            emailService.SendEmail(action, $"Clock {action} failed");
         }
     }
 }
