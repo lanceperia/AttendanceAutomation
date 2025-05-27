@@ -44,12 +44,10 @@ namespace AttendanceAutomation.Services
                 Scope = "openid"
             };
 
-            var jsonContent = new StringContent(JsonSerializer.Serialize(dto), Encoding.UTF8, MediaTypeNames.Application.Json);
-            var _client = new HttpClient()
-            {
-                BaseAddress = new Uri("https://api.platform.emapta.com")
-            };
-            _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_accessToken}");
+            var _client = PrepareClient();
+            var jsonContent = new StringContent(JsonSerializer.Serialize(dto), 
+                Encoding.UTF8, 
+                MediaTypeNames.Application.Json);
             var result = _client.PostAsync("auth/v1/auth/protocol/openid-connect/token", jsonContent).Result;
             var response = result.Content.ReadAsStringAsync().Result;
 
@@ -83,11 +81,7 @@ namespace AttendanceAutomation.Services
             var dateNow = DateTime.Now.ToString("yyyy-MM-dd");
             var path = $"time-and-attendance/ta/v1/dtr/attendance?date_from={dateNow}&date_to={dateNow}";
 
-            var _client = new HttpClient()
-            {
-                BaseAddress = new Uri("https://api.platform.emapta.com")
-            };
-            _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_accessToken}");
+            var _client = PrepareClient();
             var result = _client.GetAsync(path).Result;
             var response = result.Content.ReadAsStringAsync().Result;
 
@@ -105,7 +99,7 @@ namespace AttendanceAutomation.Services
         }
 
         // Private Methods
-        private bool IsAttendanceActionSuccessful(string apiPath, string action)
+        private HttpClient PrepareClient()
         {
             var _client = new HttpClient()
             {
@@ -113,6 +107,11 @@ namespace AttendanceAutomation.Services
             };
             _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {_accessToken}");
 
+            return _client;
+        }
+        private bool IsAttendanceActionSuccessful(string apiPath, string action)
+        {
+            var _client = PrepareClient();
             var result = _client.PostAsync(apiPath, new StringContent(string.Empty)).Result;
             var response = result.Content.ReadAsStringAsync().Result;
 

@@ -28,7 +28,6 @@ namespace AttendanceAutomation
             if (!emaptaService.IsTokenRefreshed())
             {
                 logger.Information("ISSUE WITH REFRESH TOKEN :(");
-
                 emailService.SendEmail("Failed", "Session's expired :(");
 
                 return;
@@ -42,7 +41,6 @@ namespace AttendanceAutomation
                 || IsStatusEqual(attendanceDetails.Status, AttendanceItem.ON_LEAVE))
             {
                 emailService.SendEmail("Restday", $"Don't bother working");
-
                 return;
             }
 
@@ -50,7 +48,6 @@ namespace AttendanceAutomation
             if (IsStatusEqual(attendanceDetails.Status, AttendanceItem.COMPLETED))
             {
                 emailService.SendEmail("Shift is done", $"Shift is completed");
-
                 return;
             }
 
