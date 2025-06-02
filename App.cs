@@ -64,6 +64,9 @@ namespace AttendanceAutomation
                 ProcessDtr("In", emaptaService.HasClockedIn);
                 return;
             }
+
+            logger.Information("Automation didn't trigger");
+            emailService.SendEmail("Automation FAILED", "Clock In/Out manually D:");
         }
 
         // Private Methods
