@@ -36,7 +36,8 @@ namespace AttendanceAutomation
             var attendanceDetails = emaptaService.GetAttendanceDetails();
 
             // Check Rest day
-            if ((attendanceDetails.IsRestday is bool isRestDay && isRestDay) 
+            var isRestDay = attendanceDetails.IsRestday ?? false;
+            if (isRestDay 
                 || IsStatusEqual(attendanceDetails.Status, AttendanceItem.RESTDAY)
                 || IsStatusEqual(attendanceDetails.Status, AttendanceItem.ON_LEAVE))
             {
@@ -52,14 +53,16 @@ namespace AttendanceAutomation
             }
 
             // Check if DTR is ready to clock out
-            if (IsStatusEqual(attendanceDetails.Status, AttendanceItem.STARTED))
+            if (IsStatusEqual(attendanceDetails.Status, AttendanceItem.STARTED)
+                || !isRestDay)
             {
                 ProcessDtr("Out", emaptaService.HasClockedOut);
                 return;
             }
 
             // Check if DTR is ready to clock in
-            if (IsStatusEqual(attendanceDetails.Status, AttendanceItem.NOT_STARTED))
+            if (IsStatusEqual(attendanceDetails.Status, AttendanceItem.NOT_STARTED)
+                || !isRestDay)
             {
                 ProcessDtr("In", emaptaService.HasClockedIn);
                 return;
