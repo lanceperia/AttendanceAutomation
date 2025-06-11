@@ -174,7 +174,7 @@ namespace AttendanceAutomation.Services
             }
             catch (Exception e)
             {
-                _loggerService.Error($"{message!.StatusCode}: {message.Content} -- {e.StackTrace}");
+                _loggerService.Error($"{message!.StatusCode}: {message.Content.ReadAsStringAsync().Result} -- {e.StackTrace}");
             }
         }
     }
