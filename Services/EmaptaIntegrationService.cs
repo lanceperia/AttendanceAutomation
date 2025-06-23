@@ -51,8 +51,6 @@ namespace AttendanceAutomation.Services
             var result = _client.PostAsync("auth/v1/auth/protocol/openid-connect/token", jsonContent).Result;
             var response = result.Content.ReadAsStringAsync().Result;
 
-            LogResponse(result, "RefreshToken");
-
             if (result.IsSuccessStatusCode)
             {
                 var tokens = JsonSerializer.Deserialize<TokenResponseModel>(response);
@@ -166,15 +164,17 @@ namespace AttendanceAutomation.Services
         }
         private void LogResponse(HttpResponseMessage? message, string method)
         {
+            var messageContent = message.Content.ReadAsStringAsync().Result;
+
             try
             {
                 message!.EnsureSuccessStatusCode();
 
-                _loggerService.Information($"({method}) {message.StatusCode}: Success");
+                _loggerService.Information($"({method}) {message.StatusCode}: Success -- {messageContent}");
             }
             catch (Exception e)
             {
-                _loggerService.Error($"{message!.StatusCode}: {message.Content.ReadAsStringAsync().Result} -- {e.StackTrace}");
+                _loggerService.Error($"{message!.StatusCode}: {messageContent} -- {e.StackTrace}");
             }
         }
     }

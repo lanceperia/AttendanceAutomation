@@ -53,16 +53,15 @@ namespace AttendanceAutomation
             }
 
             // Check if DTR is ready to clock out
-            if (IsStatusEqual(attendanceDetails.Status, AttendanceItem.STARTED)
-                || !isRestDay)
+            var hasTimeIn = !string.IsNullOrWhiteSpace(attendanceDetails.DateTimeIn);
+            if (hasTimeIn && !isRestDay)
             {
                 ProcessDtr("Out", emaptaService.HasClockedOut);
                 return;
             }
 
             // Check if DTR is ready to clock in
-            if (IsStatusEqual(attendanceDetails.Status, AttendanceItem.NOT_STARTED)
-                || !isRestDay)
+            if (!hasTimeIn && !isRestDay)
             {
                 ProcessDtr("In", emaptaService.HasClockedIn);
                 return;

@@ -30,5 +30,11 @@ namespace AttendanceAutomation.Models
 
         [JsonPropertyName("is_restday")]
         public bool? IsRestday { get; set; }
+
+        [JsonPropertyName("date_time_in")]
+        public string? DateTimeIn { get; set; }
+
+        [JsonPropertyName("date_time_out")]
+        public string? DateTimeOut { get; set; }
     }
 }
