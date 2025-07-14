@@ -9,6 +9,6 @@ namespace AttendanceAutomation.Interfaces
         bool HasClockedIn();
         bool HasClockedOut();
         
-        AttendanceItem GetAttendanceDetails();
+        AttendanceItem? GetAttendanceDetails();
     }
 }

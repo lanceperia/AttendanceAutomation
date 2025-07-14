@@ -1,9 +1,8 @@
 ﻿using AttendanceAutomation.Interfaces;
 using AttendanceAutomation.Models;
 using Microsoft.Extensions.Configuration;
-using System.Net.Http.Json;
+using System.Net;
 using System.Net.Mime;
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -44,26 +43,27 @@ namespace AttendanceAutomation.Services
                 Scope = "openid"
             };
 
-            var _client = PrepareClient();
-            var jsonContent = new StringContent(JsonSerializer.Serialize(dto), 
-                Encoding.UTF8, 
-                MediaTypeNames.Application.Json);
-            var result = _client.PostAsync("auth/v1/auth/protocol/openid-connect/token", jsonContent).Result;
-            var response = result.Content.ReadAsStringAsync().Result;
-
-            if (result.IsSuccessStatusCode)
+            return ExecuteWithRetry(client =>
             {
-                var tokens = JsonSerializer.Deserialize<TokenResponseModel>(response);
-                
-                // Overwrite AppSettings in published build
-                OverwriteAppSettings(tokens, _appSettingsPath);
+                var jsonContent = new StringContent(JsonSerializer.Serialize(dto),
+                    Encoding.UTF8,
+                    MediaTypeNames.Application.Json);
+                var result = client.PostAsync("auth/v1/auth/protocol/openid-connect/token", jsonContent).Result;
+                var response = result.Content.ReadAsStringAsync().Result;
 
-                _accessToken = tokens!.Result.AccessToken;
+                if (result.IsSuccessStatusCode)
+                {
+                    var tokens = JsonSerializer.Deserialize<TokenResponseModel>(response);
 
-                return true;
-            }
+                    // Overwrite AppSettings in published build
+                    OverwriteAppSettings(tokens, _appSettingsPath);
 
-            return false;
+                    _accessToken = tokens!.Result.AccessToken;
+                }
+
+                return result?.IsSuccessStatusCode ?? null;
+
+            }, nameof(IsTokenRefreshed), 5, 1000) ?? false;
         }
 
         public bool HasClockedIn()
@@ -74,26 +74,25 @@ namespace AttendanceAutomation.Services
         {
             return IsAttendanceActionSuccessful("time-and-attendance/ta/v1/dtr/attendance/logout", "ClockOut");
         }
-        public AttendanceItem GetAttendanceDetails()
+        public AttendanceItem? GetAttendanceDetails()
         {
-            var dateNow = DateTime.Now.ToString("yyyy-MM-dd");
-            var path = $"time-and-attendance/ta/v1/dtr/attendance?date_from={dateNow}&date_to={dateNow}";
-
-            var _client = PrepareClient();
-            var result = _client.GetAsync(path).Result;
-            var response = result.Content.ReadAsStringAsync().Result;
-
-            LogResponse(result, "AttendanceDetails");
-
-            if (result.IsSuccessStatusCode)
+            return ExecuteWithRetry(client =>
             {
+                var dateNow = DateTime.Now.ToString("yyyy-MM-dd");
+                var path = $"time-and-attendance/ta/v1/dtr/attendance?date_from={dateNow}&date_to={dateNow}";
+                var result = client.GetAsync(path).Result;
+                var response = result.Content.ReadAsStringAsync().Result;
+
+                LogResponse(response, "AttendanceDetails", result.StatusCode);
+
+                if (!result.IsSuccessStatusCode)
+                {
+                    return null;
+                }
+
                 var attendanceModel = JsonSerializer.Deserialize<AttendanceModel>(response);
-
                 return attendanceModel.Data.Items.FirstOrDefault();
-            }
-
-            throw new Exception("API failed");
-
+            }, nameof(GetAttendanceDetails));
         }
 
         // Private Methods
@@ -109,13 +108,16 @@ namespace AttendanceAutomation.Services
         }
         private bool IsAttendanceActionSuccessful(string apiPath, string action)
         {
-            var _client = PrepareClient();
-            var result = _client.PostAsync(apiPath, new StringContent(string.Empty)).Result;
-            var response = result.Content.ReadAsStringAsync().Result;
+            return ExecuteWithRetry(client =>
+            {
+                var result = client.PostAsync(apiPath, new StringContent(string.Empty)).Result;
+                var response = result.Content.ReadAsStringAsync().Result;
 
-            LogResponse(result, action);
+                LogResponse(response, action, result.StatusCode);
 
-            return result.IsSuccessStatusCode;
+                return result?.IsSuccessStatusCode ?? null;
+
+            }, nameof(IsAttendanceActionSuccessful)) ?? false;
         }
 
         private void OverwriteAppSettings(TokenResponseModel? model, string filePath)
@@ -162,20 +164,46 @@ namespace AttendanceAutomation.Services
                 _loggerService.Error($"{e.Message} -- {e.StackTrace}");
             }
         }
-        private void LogResponse(HttpResponseMessage? message, string method)
+        private void LogResponse(string message, string method, HttpStatusCode statusCode = HttpStatusCode.OK)
         {
-            var messageContent = message.Content.ReadAsStringAsync().Result;
+            var httpStatusCodes = new List<HttpStatusCode> { HttpStatusCode.OK, HttpStatusCode.Found, HttpStatusCode.Created };
 
-            try
+            if (httpStatusCodes.Contains(statusCode))
             {
-                message!.EnsureSuccessStatusCode();
+                _loggerService.Information(message);
+                return;
+            }
 
-                _loggerService.Information($"({method}) {message.StatusCode}: Success -- {messageContent}");
-            }
-            catch (Exception e)
+            _loggerService.Error($"{statusCode}: {message}");
+        }
+        private T? ExecuteWithRetry<T>(Func<HttpClient, T?> action, string functionName, int retries = 3, int delayMs = 3000)
+        {
+            while (retries > 0)
             {
-                _loggerService.Error($"{message!.StatusCode}: {messageContent} -- {e.StackTrace}");
+                try
+                {
+                    using var client = PrepareClient();
+                    var result = action(client);
+                    if (result != null)
+                    {
+                        return result;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _loggerService.Error($"Exception: {ex.Message}");
+                }
+
+                retries--;
+                if (retries > 0)
+                {
+                    LogResponse($"Retrying ({retries})", functionName);
+
+                    Thread.Sleep(delayMs);
+                }
             }
+
+            return default;
         }
     }
 }

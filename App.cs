@@ -9,6 +9,9 @@ namespace AttendanceAutomation
         IEmaptaIntegrationService emaptaService,
         IEmailNotificationService emailService)
     {
+
+        private const string EMAIL_SUBJECT = "DTR";
+
         public void Run()
         {
             // Check if there's internet connection
@@ -34,21 +37,25 @@ namespace AttendanceAutomation
             }
 
             var attendanceDetails = emaptaService.GetAttendanceDetails();
+            if (attendanceDetails is null)
+            {
+                emailService.SendEmail(EMAIL_SUBJECT, "API Failed");
+            }
 
             // Check Rest day
             var isRestDay = attendanceDetails.IsRestday ?? false;
-            if (isRestDay 
+            if (isRestDay
                 || IsStatusEqual(attendanceDetails.Status, AttendanceItem.RESTDAY)
                 || IsStatusEqual(attendanceDetails.Status, AttendanceItem.ON_LEAVE))
             {
-                emailService.SendEmail("Restday", $"Don't bother working");
+                emailService.SendEmail(EMAIL_SUBJECT, $"Don't bother working");
                 return;
             }
 
             // Check if DTR is completed
             if (IsStatusEqual(attendanceDetails.Status, AttendanceItem.COMPLETED))
             {
-                emailService.SendEmail("Shift is done", $"Shift is completed");
+                emailService.SendEmail(EMAIL_SUBJECT, $"Shift is completed");
                 return;
             }
 
@@ -68,7 +75,7 @@ namespace AttendanceAutomation
             }
 
             logger.Information("Automation didn't trigger");
-            emailService.SendEmail("Automation FAILED", "Clock In/Out manually D:");
+            emailService.SendEmail(EMAIL_SUBJECT, "Clock In/Out manually D:");
         }
 
         // Private Methods
@@ -82,11 +89,11 @@ namespace AttendanceAutomation
             {
                 logger.Information($"Clocked {action} Successfully!");
 
-                emailService.SendEmail("DTR", $"Clocked {action} at {DateTime.Now:t}");
+                emailService.SendEmail(EMAIL_SUBJECT, $"Clocked {action} at {DateTime.Now:t}");
                 return;
             }
 
-            emailService.SendEmail("DTR", $"Clock {action} failed");
+            emailService.SendEmail(EMAIL_SUBJECT, $"Clock {action} failed");
         }
     }
 }
