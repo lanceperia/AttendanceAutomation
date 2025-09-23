@@ -51,6 +51,8 @@ namespace AttendanceAutomation.Services
                 var result = client.PostAsync("auth/v1/auth/protocol/openid-connect/token", jsonContent).Result;
                 var response = result.Content.ReadAsStringAsync().Result;
 
+                LogResponse(response, nameof(IsTokenRefreshed), result.StatusCode);
+
                 if (result.IsSuccessStatusCode)
                 {
                     var tokens = JsonSerializer.Deserialize<TokenResponseModel>(response);
@@ -166,15 +168,16 @@ namespace AttendanceAutomation.Services
         }
         private void LogResponse(string message, string method, HttpStatusCode statusCode = HttpStatusCode.OK)
         {
+            var logMessage = $"[{method}] {message}";
             var httpStatusCodes = new List<HttpStatusCode> { HttpStatusCode.OK, HttpStatusCode.Found, HttpStatusCode.Created };
 
             if (httpStatusCodes.Contains(statusCode))
             {
-                _loggerService.Information(message);
+                _loggerService.Information(logMessage);
                 return;
             }
 
-            _loggerService.Error($"{statusCode}: {message}");
+            _loggerService.Error($"{statusCode}: {logMessage}");
         }
         private T? ExecuteWithRetry<T>(Func<HttpClient, T?> action, string functionName, int retries = 3, int delayMs = 3000)
         {
